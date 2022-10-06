@@ -23,5 +23,6 @@ class Userdata extends Model
         'password',
         'app_version',
         'referral_code',
+        'firebase_reg_id',
     ];
 }

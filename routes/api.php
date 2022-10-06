@@ -27,6 +27,10 @@ Route::put('/update-paymentrequests/{id}', [PaymentrequestsController::class, 'u
 Route::put('/update-transactions/{id}', [TransactionsController::class, 'update']);
 Route::put('/update-userdata/{id}', [UserdataController::class, 'update']);
 
+
+Route::post('/login', [UserdataController::class, 'login']);
+Route::post('/register', [UserdataController::class, 'register']);
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });

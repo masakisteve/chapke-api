@@ -31,6 +31,11 @@ Route::put('/update-userdata/{id}', [UserdataController::class, 'update']);
 Route::post('/login', [UserdataController::class, 'login']);
 Route::post('/register', [UserdataController::class, 'register']);
 
+Route::post('/withdraw_money', [TransactionsController::class, 'withdraw_money']);
+Route::post('/user_balance', [TransactionsController::class, 'user_balance']);
+Route::post('/send_money', [TransactionsController::class, 'send_money']);
+
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });

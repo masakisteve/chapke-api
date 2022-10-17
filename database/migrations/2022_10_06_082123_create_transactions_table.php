@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->string('user_id', 10);
-            $table->string('transaction_type', 10);
+            $table->string('transaction_type', 50);
             $table->string('transaction_code', 10);
             $table->string('notes', 100);
             $table->string('state', 10);

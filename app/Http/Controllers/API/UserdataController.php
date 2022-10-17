@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Userdata;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\API\Functions\AbstractedFunctions;
 
 class UserdataController extends Controller
 {
@@ -80,52 +81,36 @@ class UserdataController extends Controller
 
     public function login(Request $request)
     {
+        $abstracted_functions = new AbstractedFunctions();
 
-        $email = $request->input('email');
+        $login_id = $request->input('login_id');
         $password = $request->input('password');
 
-        $key = env('PASSWORD_ENCRYPTION_KEY');
-        $passwordd = hash_hmac('sha256', $password, $key);
-        // $password2 = md5($password);
-
         $needle   = "@";
-        if (strpos($email, $needle) !== false) {
+        if (strpos($login_id, $needle) !== false) {
             // echo $email." is an email address";
             $column = "email_address";
-            $email2 = $email;
-            $loginMethod = "Email Address";
+            $login_id2 = $login_id;
         } else {
             // echo $email." is a phone number";
             $column = "phone_number";
-            $loginMethod = "Phone Number";
-
-            if (strlen($email) == 10) {
-
-                $email1 = substr($email, 1);
-                $email2 = "254" . $email1;
-            } else if (strlen($email) == 9) {
-
-                $email2 = "254" . $email;
-            } else if (strlen($email) == 13) {
-
-                $email2 = substr($email, 1);
-            } else {
-                $email2 = $email;
-            }
+            $login_id2 = $abstracted_functions->standardize_phonenumber($login_id);
         }
 
-        $logins = DB::select('SELECT * from userdata WHERE ' . $column . '  = ? AND password = ?', [$email2, $passwordd]);
+        $logins = DB::select('SELECT * from userdata WHERE ' . $column . '  = ? AND password = ?', [$login_id2, $abstracted_functions->decrypt_password($password)]);
 
         if ($logins) {
             return response()->json([
                 'status' => 200,
                 'error' => false,
                 'message' => 'Login Successful',
-                'uid' => $logins[0]->id,
-                'name' =>  $logins[0]->first_name,
-                'created_at' =>  $logins[0]->created_at,
-                'email2' =>  $logins[0]->phone_number,
-                'email' =>  $logins[0]->email_address,
+                'user' => [
+                    'uid' => $logins[0]->id,
+                    'name' =>  $logins[0]->first_name,
+                    'created_at' =>  $logins[0]->created_at,
+                    'email2' =>  $logins[0]->phone_number,
+                    'email' =>  $logins[0]->email_address,
+                ]
             ]);
         } else {
             return response()->json([
@@ -137,48 +122,19 @@ class UserdataController extends Controller
 
     public function register(Request $request)
     {
-        function generate_RefCode($length)
-        {
+        $abstracted_functions = new AbstractedFunctions();
 
-            $alphabets = range('A', 'Z');
-            $numbers = range('0', '9');
-            $final_array = array_merge($numbers, $alphabets);
-
-            $transaction = '';
-
-            while ($length--) {
-                $key = array_rand($final_array);
-                $transaction .= $final_array[$key];
-            }
-
-            return $transaction;
-        }
         $name = $request->input('name');
-        $phone_number = $request->input('email');
+        $phone_number1 = $request->input('email');
         $email_address = $request->input('email2');
         $password = $request->input('password');
         $user_role = $request->input('user_type');
         // $id_number = $request->input('id_number');
 
-        if (strlen($phone_number) == 10) {
-
-            $phone_number1 = substr($phone_number, 1);
-            $phone_number = "254" . $phone_number1;
-        } else if (strlen($phone_number) == 9) {
-
-            $phone_number = "254" . $phone_number;
-        } else if (strlen($phone_number) == 13) {
-
-            $phone_number = substr($phone_number, 1);
-        } else {
-            $phone_number = $phone_number;
-        }
-
-        $key = env('PASSWORD_ENCRYPTION_KEY');
-        $passwordd = hash_hmac('sha256', $password, $key);
+        $phone_number = $abstracted_functions->standardize_phonenumber($phone_number1);
 
         do {
-            $ref_code = generate_RefCode(6);
+            $ref_code = $abstracted_functions->generate_RefCode(6);
             $resultref_code = DB::select('SELECT * from userdata WHERE referral_code  = ?', [$ref_code]);
         } while (sizeof($resultref_code) >= 1);
 
@@ -217,7 +173,7 @@ class UserdataController extends Controller
             $userdata->id_number = "NULL";
             $userdata->date_of_birth = "NULL";
             $userdata->gender = "NULL";
-            $userdata->password = $passwordd;
+            $userdata->password = $abstracted_functions->decrypt_password($password);
             $userdata->app_version = "NULL";
             $userdata->referral_code = $ref_code;
             $userdata->firebase_reg_id = "NULL";
@@ -225,11 +181,16 @@ class UserdataController extends Controller
 
             $return_user_data = DB::select('SELECT * from userdata WHERE phone_number  = ?', [$phone_number]);
 
-
             return response()->json([
                 'status' => 200,
                 'message' => 'Successful',
-                'name' => $return_user_data[0]->first_name,
+                'uid' => $return_user_data[0]->id,
+                'user' => [
+                    'created_at' => $return_user_data[0]->created_at,
+                    'email2' => $return_user_data[0]->phone_number,
+                    'email' => $return_user_data[0]->email_address,
+                    'name' => $return_user_data[0]->first_name,
+                ]
             ]);
         }
     }

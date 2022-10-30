@@ -121,12 +121,14 @@ class TransactionsController extends Controller
                     return response()->json([
                         'status' => 200,
                         'error' => false,
+                        'error_msg' => 'Transaction Successful.',
                         'transaction_msg' => $transaction_code . '. Success, you have withdrawn KES.' . $amountTransacted . ' from agent number ' . $receiverNumber . '. on ' .  $transactions->created_at,
                     ]);
                 } else {
                     return response()->json([
                         'status' => 500,
                         'error' => true,
+                        'error_msg' => 'The PIN you entered was incorrect, try again.',
                         'transaction_msg' => 'The PIN you entered was incorrect, try again.',
                     ]);
                 }
@@ -134,6 +136,7 @@ class TransactionsController extends Controller
                 return response()->json([
                     'status' => 500,
                     'error' => true,
+                    'error_msg' => 'The agent number you entered is not a registered agent.',
                     'transaction_msg' => 'The agent number you entered is not a registered agent.',
                 ]);
             }
@@ -141,6 +144,7 @@ class TransactionsController extends Controller
             return response()->json([
                 'status' => 500,
                 'error' => true,
+                'error_msg' => 'You do not have enough balance to transact KES.' . $amountTransacted . '. You need to top  up atleast KES.' . $amountTransacted - $user_balance . '.',
                 'transaction_msg' => 'You do not have enough balance to transact KES.' . $amountTransacted . '. You need to top  up atleast KES.' . $amountTransacted - $user_balance . '.',
             ]);
         }
@@ -154,7 +158,7 @@ class TransactionsController extends Controller
         $amountTransacted = $request->input('amountTransacted');
         $receiverNumber = $request->input('receiverNumber');
         $senderNumber = $request->input('senderNumber');
-        $pinWithdraw = $request->input('pinWithdraw');
+        $pinWithdraw = $request->input('pinSend');
 
         $pinCheck = DB::select('SELECT * from userdata WHERE phone_number  = ? AND password = ?', [$abstracted_functions->standardize_phonenumber($senderNumber), $abstracted_functions->decrypt_password($pinWithdraw)]);
         $getReceiverDetails = DB::select('SELECT * from userdata WHERE phone_number  = ?', [$abstracted_functions->standardize_phonenumber($receiverNumber)]);
@@ -197,12 +201,14 @@ class TransactionsController extends Controller
                     return response()->json([
                         'status' => 200,
                         'error' => false,
+                        'error_msg' => "Transaction Successful",
                         'transaction_msg' => $transaction_code . '. Success, you have withdrawn KES.' . $amountTransacted . ' from agent number ' . $receiverNumber . '. on ' .  $transactions->created_at,
                     ]);
                 } else {
                     return response()->json([
                         'status' => 500,
                         'error' => true,
+                        'error_msg' => "The PIN you entered was incorrect, try again.",
                         'transaction_msg' => 'The PIN you entered was incorrect, try again.',
                     ]);
                 }
@@ -210,6 +216,7 @@ class TransactionsController extends Controller
                 return response()->json([
                     'status' => 500,
                     'error' => true,
+                    'error_msg' => "The receiver number you entered is not registered on Chap Money.",
                     'transaction_msg' => 'The receiver number you entered is not registered on Chap Money.',
                 ]);
             }
@@ -217,6 +224,7 @@ class TransactionsController extends Controller
             return response()->json([
                 'status' => 500,
                 'error' => true,
+                'error_msg' => 'You do not have enough balance to transact KES.' . $amountTransacted . '. You need to top  up atleast KES.' . $amountTransacted - $user_balance . '.',
                 'transaction_msg' => 'You do not have enough balance to transact KES.' . $amountTransacted . '. You need to top  up atleast KES.' . $amountTransacted - $user_balance . '.',
             ]);
         }
@@ -226,8 +234,10 @@ class TransactionsController extends Controller
     {
         return response()->json([
             'status' => 200,
-            'message' => 'Successful',
-            'transaction_msg' => $this->get_user_balance($request->input('phoneNumber')),
+            'error' => false,
+            'error_msg' => 'Successful',
+            'balance' => $this->get_user_balance($request->input('phoneNumber')),
+            'transaction_msg' => "Your Balance is: KES." . $this->get_user_balance($request->input('phoneNumber')),
         ]);
     }
 
@@ -254,6 +264,45 @@ class TransactionsController extends Controller
         }
 
         $user_balance = $cr_total - $dr_total;
-        return $user_balance;
+        return strval($user_balance);
+    }
+
+    public function account_statements($id)
+    {
+        $abstracted_functions = new AbstractedFunctions();
+
+        $phone_number = $abstracted_functions->standardize_phonenumber($id);
+        $get_user_id = DB::select('SELECT id from userdata WHERE phone_number  = ?', [$phone_number]);
+        $user_id = $get_user_id[0]->id;
+
+        $get_statements = DB::select('SELECT * from transactions WHERE user_id = ?', [$user_id]);
+
+        if ($get_statements) {
+            $encoded = json_encode($get_statements, true);
+            $decoded = json_decode($encoded, true);
+            $d = array();
+            foreach ($decoded as $obj) {
+                $amount_transacted = $obj['transaction_dr'] + $obj['transaction_cr'];
+                $d[] = array(
+                    'transactionId' => $obj['transaction_code'],
+                    'receiverNumber' => $obj['receiverNumber'],
+                    'senderNumber' => $obj['senderNumber'],
+                    'amountTransacted' => $amount_transacted,
+                    'date' => $obj['created_at'],
+                    'transactionType' => $obj['transaction_type'],
+                );
+            }
+            $json = json_encode($d);
+            $json2 = json_decode($json);
+
+            return response()->json(
+                // 'status' => 200,
+                $json2
+                // 'error' => false,
+                // 'error_msg' => 'Successful',
+                // 'balance' => $this->get_user_balance($request->input('phoneNumber')),
+                // 'transaction_msg' => "Your Balance is: KES." . $this->get_user_balance($request->input('phoneNumber')),
+            );
+        }
     }
 }

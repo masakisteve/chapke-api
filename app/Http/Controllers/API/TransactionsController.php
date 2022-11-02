@@ -277,7 +277,7 @@ class TransactionsController extends Controller
 
         $get_statements = DB::select('SELECT * from transactions WHERE user_id = ?', [$user_id]);
 
-        if ($get_statements) {
+        if ($get_statements and sizeof($get_statements) > 0) {
             $encoded = json_encode($get_statements, true);
             $decoded = json_decode($encoded, true);
             $d = array();
@@ -303,6 +303,8 @@ class TransactionsController extends Controller
                 // 'balance' => $this->get_user_balance($request->input('phoneNumber')),
                 // 'transaction_msg' => "Your Balance is: KES." . $this->get_user_balance($request->input('phoneNumber')),
             );
+        } else {
+            return response()->json();
         }
     }
 }

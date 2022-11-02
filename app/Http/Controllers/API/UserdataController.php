@@ -104,7 +104,7 @@ class UserdataController extends Controller
                 'status' => 200,
                 'error' => false,
                 'uid' => $logins[0]->id,
-                'message' => 'Login Successful',
+                'error_msg' => 'Login Successful',
                 'user' => [
                     'uid' => $logins[0]->id,
                     'name' =>  $logins[0]->first_name,
@@ -117,7 +117,7 @@ class UserdataController extends Controller
             return response()->json([
                 'status' => 500,
                 'error' => true,
-                'message' => 'Login not successful',
+                'error_msg' => 'Login not successful',
             ]);
         }
     }
@@ -185,7 +185,8 @@ class UserdataController extends Controller
 
             return response()->json([
                 'status' => 200,
-                'message' => 'Successful',
+                'error' => false,
+                'error_msg' => 'Successful',
                 'uid' => $return_user_data[0]->id,
                 'user' => [
                     'created_at' => $return_user_data[0]->created_at,
@@ -195,16 +196,6 @@ class UserdataController extends Controller
                 ]
             ]);
         }
-    }
-
-    public function get_notification_count(Request $request)
-    {
-        return response()->json([
-            'status' => 200,
-            'error' => false,
-            'unread' => '1',
-            'message' => 'Get notifications successful.',
-        ]);
     }
 
     public function get_contacts(Request $request)

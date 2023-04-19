@@ -206,11 +206,7 @@ class TransactionsController extends Controller
                         'status' => 200,
                         'error' => false,
                         'error_msg' => "Transaction Successful",
-<<<<<<< HEAD
                         'transaction_msg' => $transaction_code . '. Success, you have sent KES.' . $amountTransacted . ' to '.$receiver_name.', ' . $receiverNumber . '. on ' .  $transactions->created_at,
-=======
-                        'transaction_msg' => $transaction_code . '. Success, you have withdrawn KES.' . $amountTransacted . ' from agent number ' . $receiverNumber . '. on ' .  $transactions->created_at,
->>>>>>> d1d5937ca46bfee0ae3979c1a6316540c8607939
                     ]);
                 } else {
                     return response()->json([
@@ -273,50 +269,6 @@ class TransactionsController extends Controller
 
         $user_balance = $cr_total - $dr_total;
         return strval($user_balance);
-<<<<<<< HEAD
-=======
-    }
-
-    public function account_statements($id)
-    {
-        $abstracted_functions = new AbstractedFunctions();
-
-        $phone_number = $abstracted_functions->standardize_phonenumber($id);
-        $get_user_id = DB::select('SELECT id from userdata WHERE phone_number  = ?', [$phone_number]);
-        $user_id = $get_user_id[0]->id;
-
-        $get_statements = DB::select('SELECT * from transactions WHERE user_id = ?', [$user_id]);
-
-        if ($get_statements and sizeof($get_statements) > 0) {
-            $encoded = json_encode($get_statements, true);
-            $decoded = json_decode($encoded, true);
-            $d = array();
-            foreach ($decoded as $obj) {
-                $amount_transacted = $obj['transaction_dr'] + $obj['transaction_cr'];
-                $d[] = array(
-                    'transactionId' => $obj['transaction_code'],
-                    'receiverNumber' => $obj['receiverNumber'],
-                    'senderNumber' => $obj['senderNumber'],
-                    'amountTransacted' => $amount_transacted,
-                    'date' => $obj['created_at'],
-                    'transactionType' => $obj['transaction_type'],
-                );
-            }
-            $json = json_encode($d);
-            $json2 = json_decode($json);
-
-            return response()->json(
-                // 'status' => 200,
-                $json2
-                // 'error' => false,
-                // 'error_msg' => 'Successful',
-                // 'balance' => $this->get_user_balance($request->input('phoneNumber')),
-                // 'transaction_msg' => "Your Balance is: KES." . $this->get_user_balance($request->input('phoneNumber')),
-            );
-        } else {
-            return response()->json();
-        }
->>>>>>> d1d5937ca46bfee0ae3979c1a6316540c8607939
     }
 
     public function account_statements($id)

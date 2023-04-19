@@ -103,7 +103,8 @@ class UserdataController extends Controller
             return response()->json([
                 'status' => 200,
                 'error' => false,
-                'message' => 'Login Successful',
+                'uid' => $logins[0]->id,
+                'error_msg' => 'Login Successful',
                 'user' => [
                     'uid' => $logins[0]->id,
                     'name' =>  $logins[0]->first_name,
@@ -115,8 +116,10 @@ class UserdataController extends Controller
         } else {
             return response()->json([
                 'status' => 500,
-                'message' => 'Login not successful',
+                'error' => true,
+                'error_msg' => 'Login not successful',
             ]);
+          
         }
     }
 
@@ -183,7 +186,8 @@ class UserdataController extends Controller
 
             return response()->json([
                 'status' => 200,
-                'message' => 'Successful',
+                'error' => false,
+                'error_msg' => 'Successful',
                 'uid' => $return_user_data[0]->id,
                 'user' => [
                     'created_at' => $return_user_data[0]->created_at,
@@ -191,6 +195,74 @@ class UserdataController extends Controller
                     'email' => $return_user_data[0]->email_address,
                     'name' => $return_user_data[0]->first_name,
                 ]
+            ]);
+        }
+    }
+
+    public function get_contacts(Request $request)
+    {
+
+        $abstracted_functions = new AbstractedFunctions();
+        $result2 = DB::select('SELECT phone_number, first_name from userdata');
+        $data3 = json_encode($result2);
+        $data22 = json_decode($data3, true);
+        $d = array();
+
+        $response_data = $request->getContent();
+        $obj = json_decode($response_data, TRUE);
+        foreach ($obj as $key => $value) {
+            foreach ($data22 as $obj) {
+                if ($abstracted_functions->standardize_phonenumber($value) == $obj['phone_number']) {
+                    $d[] = array('name' => $obj['first_name'], 'phone' => $obj['phone_number'], 'image' => 'image.jpg');
+                }
+            }
+        }
+        $json = json_encode($d);
+        $json2 = json_decode($json);
+
+
+        return response()->json([
+            'status' => 200,
+            'error' => false,
+            'error_msg' => 'Successful',
+            'contacts_array' => $json2,
+        ]);
+    }
+
+    public function pin_change(Request $request)
+    {
+        $phoneNumber = $request->input('phoneNumber');
+        $pinNewChange = $request->input('pinNewChange');
+        $pinOldChange = $request->input('pinOldChange');
+
+        $abstracted_functions = new AbstractedFunctions();
+
+        $pin_check = DB::select('SELECT * from userdata WHERE phone_number  = ? AND password = ?', [$abstracted_functions->standardize_phonenumber($phoneNumber), $abstracted_functions->decrypt_password($pinOldChange)]);
+
+        if ($pin_check and sizeof($pin_check) == 1) {
+
+            try {
+                DB::select('UPDATE userdata SET password = ?  WHERE phone_number  = ?', [$abstracted_functions->decrypt_password($pinNewChange), $abstracted_functions->standardize_phonenumber($phoneNumber)]);
+                return response()->json([
+                    'status' => 200,
+                    'error' => false,
+                    'error_msg' => 'PIN Change successful.',
+                    'transaction_msg' => 'PIN Change successful.',
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                return response()->json([
+                    'status' => 500,
+                    'error' => true,
+                    'error_msg' => 'PIN Change unsuccessful.',
+                    'transaction_msg' => 'PIN Change unsuccessful.',
+                ]);
+            }
+        } else {
+            return response()->json([
+                'status' => 500,
+                'error' => true,
+                'error_msg' => 'The PIN you entered is incorrect.',
+                'transaction_msg' => 'The PIN you entered is incorrect.',
             ]);
         }
     }

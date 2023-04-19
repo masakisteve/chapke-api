@@ -206,6 +206,10 @@ class UserdataController extends Controller
         $result2 = DB::select('SELECT phone_number, first_name from userdata');
         $data3 = json_encode($result2);
         $data22 = json_decode($data3, true);
+<<<<<<< HEAD
+=======
+
+>>>>>>> d1d5937ca46bfee0ae3979c1a6316540c8607939
         $d = array();
 
         $response_data = $request->getContent();

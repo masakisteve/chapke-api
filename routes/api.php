@@ -43,6 +43,7 @@ Route::get('/get_notifications/{id}', [NotificationsController::class, 'get_noti
 
 Route::post('/initiate_request', [PaymentrequestsController::class, 'initiate_request']);
 Route::get('/get_payment_request', [PaymentrequestsController::class, 'get_payment_request']);
+Route::post('/reject_or_approve_request', [PaymentrequestsController::class, 'reject_or_approve_request']);
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

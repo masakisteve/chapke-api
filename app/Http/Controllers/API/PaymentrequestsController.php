@@ -101,26 +101,33 @@ class PaymentrequestsController extends Controller
         }
     }
 
+    public function reject_or_approve_request(Request $request)
+    {
+        $abstracted_functions = new AbstractedFunctions();
+
+        $pinSend = $request->input('pinSend');
+    }
+
     public function get_payment_request(Request $request)
     {
         $requestor = $request->input('senderNumber');
 
-        $get_sender_id = DB::select('SELECT * from userdata WHERE email_address  = ?', [$requestor]);
+        $get_sender_id = DB::select('SELECT * from userdata WHERE email_address  = ? AND approval_status = "pending"', [$requestor]);
 
         if (!empty($get_sender_id)) {
             $fetch_requests = DB::select('SELECT 
-         pr.id,  
-         pr.amount,
-         ud.first_name as requestorName,
-         ud.phone_number
-     FROM 
-         paymentrequests pr 
-     INNER JOIN 
-         userdata ud 
-     ON 
-         pr.requestor_id = ud.id 
-     WHERE 
-         pr.benefactor_id = ?', [$get_sender_id[0]->id]);
+                    pr.id,  
+                    pr.amount,
+                    ud.first_name as requestorName,
+                    ud.phone_number
+                FROM 
+                    paymentrequests pr 
+                INNER JOIN 
+                    userdata ud 
+                ON 
+                    pr.requestor_id = ud.id 
+                WHERE 
+                    pr.benefactor_id = ?', [$get_sender_id[0]->id]);
 
             return response()->json($fetch_requests);
         }

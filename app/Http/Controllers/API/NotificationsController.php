@@ -106,11 +106,8 @@ class NotificationsController extends Controller
                 // 'balance' => $this->get_user_balance($request->input('phoneNumber')),
                 // 'transaction_msg' => "Your Balance is: KES." . $this->get_user_balance($request->input('phoneNumber')),
             );
-        }
-        else {
-            return response()->json(
-               
-            );
+        } else {
+            return response()->json();
         }
     }
 }

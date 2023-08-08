@@ -89,6 +89,8 @@ class TransactionsController extends Controller
             if ($getAgentDetails and $getAgentDetails[0]->user_role == "agent") {
                 if ($pinCheck) {
 
+                    $fee = $abstracted_functions->get_transaction_fees($amountTransacted, "sending");
+
                     $transaction_code = $abstracted_functions->generate_RefCode(8);
                     $sender_number = $abstracted_functions->standardize_phonenumber($senderNumber);
                     $receiver_number = $abstracted_functions->standardize_phonenumber($receiverNumber);
@@ -100,6 +102,18 @@ class TransactionsController extends Controller
                     $transactions->notes = 'withdraw';
                     $transactions->state = 'successful';
                     $transactions->transaction_dr = $amountTransacted;
+                    $transactions->transaction_cr = '0';
+                    $transactions->senderNUmber = $sender_number;
+                    $transactions->receiverNumber = $receiver_number;
+                    $transactions->save();
+
+                    $transactions = new Transactions;
+                    $transactions->user_id = $pinCheck[0]->id;
+                    $transactions->transaction_type = 'WithdrawMoneyFee';
+                    $transactions->transaction_code = $transaction_code;
+                    $transactions->notes = 'withdrawfee';
+                    $transactions->state = 'successful';
+                    $transactions->transaction_dr = $fee;
                     $transactions->transaction_cr = '0';
                     $transactions->senderNUmber = $sender_number;
                     $transactions->receiverNumber = $receiver_number;
@@ -169,6 +183,8 @@ class TransactionsController extends Controller
             if ($getReceiverDetails) {
                 if ($pinCheck) {
 
+                    $fee = $abstracted_functions->get_transaction_fees($amountTransacted, "sending");
+
                     $transaction_code = $abstracted_functions->generate_RefCode(8);
                     $sender_number = $abstracted_functions->standardize_phonenumber($senderNumber);
                     $receiver_number = $abstracted_functions->standardize_phonenumber($receiverNumber);
@@ -180,6 +196,18 @@ class TransactionsController extends Controller
                     $transactions->notes = 'send';
                     $transactions->state = 'successful';
                     $transactions->transaction_dr = $amountTransacted;
+                    $transactions->transaction_cr = '0';
+                    $transactions->senderNUmber = $sender_number;
+                    $transactions->receiverNumber = $receiver_number;
+                    $transactions->save();
+
+                    $transactions = new Transactions;
+                    $transactions->user_id = $pinCheck[0]->id;
+                    $transactions->transaction_type = 'SendMoneyFee';
+                    $transactions->transaction_code = $transaction_code;
+                    $transactions->notes = 'sendfee';
+                    $transactions->state = 'successful';
+                    $transactions->transaction_dr = $fee;
                     $transactions->transaction_cr = '0';
                     $transactions->senderNUmber = $sender_number;
                     $transactions->receiverNumber = $receiver_number;

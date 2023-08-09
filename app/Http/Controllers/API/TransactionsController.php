@@ -7,6 +7,7 @@ use App\Models\Transactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\API\Functions\AbstractedFunctions;
+use Illuminate\Support\Facades\Http;
 
 class TransactionsController extends Controller
 {
@@ -81,7 +82,9 @@ class TransactionsController extends Controller
         $pinWithdraw = $request->input('pinWithdraw');
 
         $pinCheck = DB::select('SELECT * from userdata WHERE phone_number  = ? AND password = ?', [$abstracted_functions->standardize_phonenumber($senderNumber), $abstracted_functions->decrypt_password($pinWithdraw)]);
+        $sender_details = $pinCheck[0];
         $getAgentDetails = DB::select('SELECT * from userdata WHERE phone_number  = ?', [$abstracted_functions->standardize_phonenumber($receiverNumber)]);
+        $receiver_details = $getAgentDetails[0];
 
         $user_balance = $this->get_user_balance($senderNumber);
 
@@ -121,7 +124,7 @@ class TransactionsController extends Controller
 
                     $transactions = new Transactions;
                     $transactions->user_id = $getAgentDetails[0]->id;
-                    $transactions->transaction_type = 'WithdrawMoney';
+                    $transactions->transaction_type = 'ReceiveMoney';
                     $transactions->transaction_code = $transaction_code;
                     $transactions->notes = 'withdraw';
                     $transactions->state = 'successful';
@@ -132,11 +135,24 @@ class TransactionsController extends Controller
                     $transactions->save();
 
 
+                    $receiver_title = 'Customer Withdrawal';
+                    $receiver_message = $sender_details->first_name.', phone number '.$sender_details->phone_number.' has withdrwan KES.'.$amountTransacted.' from you on '.$transactions->created_at.'';
+                    $receiver_userid = $receiver_details->id;
+                    $receiver_active = 1;
+
+                    $sender_title = 'Withdrawal';
+                    $sender_message = $transaction_code . '. Success, you have withdrawn KES.' . $amountTransacted . ' from agent number ' . $receiverNumber . '. on ' .  $transactions->created_at;
+                    $sender_userid = $sender_details->id;
+                    $sender_active = 1;
+
+                    $this->send_notification($receiver_title, $receiver_message, $receiver_userid, $receiver_active);
+                    $this->send_notification($sender_title, $sender_message, $sender_userid, $sender_active);
+
                     return response()->json([
                         'status' => 200,
                         'error' => false,
                         'error_msg' => 'Transaction Successful.',
-                        'transaction_msg' => $transaction_code . '. Success, you have withdrawn KES.' . $amountTransacted . ' from agent number ' . $receiverNumber . '. on ' .  $transactions->created_at,
+                        'transaction_msg' => $sender_message,
                     ]);
                 } else {
                     return response()->json([
@@ -170,12 +186,14 @@ class TransactionsController extends Controller
         $abstracted_functions = new AbstractedFunctions();
 
         $amountTransacted = $request->input('amountTransacted');
-        $receiverNumber = $request->input('receiverNumber');
-        $senderNumber = $request->input('senderNumber');
+        $receiverNumber = $abstracted_functions->standardize_phonenumber($request->input('receiverNumber'));
+        $senderNumber = $abstracted_functions->standardize_phonenumber($request->input('senderNumber'));
         $pinWithdraw = $request->input('pinSend');
 
-        $pinCheck = DB::select('SELECT * from userdata WHERE phone_number  = ? AND password = ?', [$abstracted_functions->standardize_phonenumber($senderNumber), $abstracted_functions->decrypt_password($pinWithdraw)]);
-        $getReceiverDetails = DB::select('SELECT * from userdata WHERE phone_number  = ?', [$abstracted_functions->standardize_phonenumber($receiverNumber)]);
+        $pinCheck = DB::select('SELECT * from userdata WHERE phone_number  = ? AND password = ?', [$senderNumber, $abstracted_functions->decrypt_password($pinWithdraw)]);
+        $sender_details = $pinCheck[0];
+        $getReceiverDetails = DB::select('SELECT * from userdata WHERE phone_number  = ?', [$receiverNumber]);
+        $receiver_details = $getReceiverDetails[0];
 
         $user_balance = $this->get_user_balance($senderNumber);
 
@@ -215,7 +233,7 @@ class TransactionsController extends Controller
 
                     $transactions = new Transactions;
                     $transactions->user_id = $getReceiverDetails[0]->id;
-                    $transactions->transaction_type = 'SendMoney';
+                    $transactions->transaction_type = 'Receiving';
                     $transactions->transaction_code = $transaction_code;
                     $transactions->notes = 'send';
                     $transactions->state = 'successful';
@@ -225,16 +243,24 @@ class TransactionsController extends Controller
                     $transactions->receiverNumber = $receiverNumber;
                     $transactions->save();
 
-                    foreach ($getReceiverDetails as $receiver) {
-                        $receiver_name = $receiver->first_name;
-                        
-                        }
+                    $receiver_title = 'Receiving';
+                    $receiver_message = $sender_details->first_name.', phone number '.$sender_details->phone_number.' has sent you KES.'.$amountTransacted.' on '.$transactions->created_at.'';
+                    $receiver_userid = $receiver_details->id;
+                    $receiver_active = 1;
+
+                    $sender_title = 'Sending';
+                    $sender_message = $transaction_code . '. Success, you have sent KES.' . $amountTransacted . ' to ' . $receiver_details->first_name . ', ' . $receiverNumber . '. on ' .  $transactions->created_at;
+                    $sender_userid = $sender_details->id;
+                    $sender_active = 1;
+
+                    $this->send_notification($receiver_title, $receiver_message, $receiver_userid, $receiver_active);
+                    $this->send_notification($sender_title, $sender_message, $sender_userid, $sender_active);
 
                     return response()->json([
                         'status' => 200,
                         'error' => false,
                         'error_msg' => "Transaction Successful",
-                        'transaction_msg' => $transaction_code . '. Success, you have sent KES.' . $amountTransacted . ' to '.$receiver_name.', ' . $receiverNumber . '. on ' .  $transactions->created_at,
+                        'transaction_msg' => $sender_message,
                     ]);
                 } else {
                     return response()->json([
@@ -335,10 +361,18 @@ class TransactionsController extends Controller
                 // 'balance' => $this->get_user_balance($request->input('phoneNumber')),
                 // 'transaction_msg' => "Your Balance is: KES." . $this->get_user_balance($request->input('phoneNumber')),
             );
-        }else {
-            return response()->json(
-                
-            );
+        } else {
+            return response()->json();
         }
+    }
+
+    public function send_notification($title, $message, $user_id, $active)
+    {
+        Http::post('https://api.chapke.com/public/api/add-notifications', [
+            'title' => $title,
+            'message' =>  $message,
+            'user_id' => $user_id,
+            'active' => $active,
+        ]);
     }
 }

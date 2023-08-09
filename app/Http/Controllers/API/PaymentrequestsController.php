@@ -262,7 +262,7 @@ class PaymentrequestsController extends Controller
 
     public function send_notification($title, $message, $user_id, $active)
     {
-        $response = Http::post('https://api.chapke.com/public/api/add-notifications', [
+        Http::post('https://api.chapke.com/public/api/add-notifications', [
             'title' => $title,
             'message' =>  $message,
             'user_id' => $user_id,
